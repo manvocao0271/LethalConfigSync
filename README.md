@@ -14,8 +14,9 @@ Players are synced when they join. If you change settings after that, check `Syn
 ## Good to know
 
 - `SyncedEntries` is empty by default, so nothing is synced until the host fills it in.
-- Only the host's list counts. Players see it read-only while in your lobby.
-- Players without this mod (or on a different version) are refused when they try to join.
+- Only the host's list counts. Players see it in the `Host` section (display only). A player's own `SyncedEntries` is never changed by a host.
+- If the host has this mod, players without it (or on a different version) are refused when they try to join.
+- If the host does not have this mod, it does nothing for you.
 - Synced values **overwrite the player's own settings** and stay saved after they leave (restoring is planned).
 - LethalConfig's and this mod's own settings are never synced.
 

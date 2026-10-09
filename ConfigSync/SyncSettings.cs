@@ -24,11 +24,13 @@ internal static class SyncSettings
 
     private static ConfigEntry<string> _syncedEntries = null!;
     private static ConfigEntry<bool> _syncNow = null!;
+    private static ConfigEntry<string> _hostSyncedEntries = null!;
 
     private static string? _compiledFrom;
     private static List<EntryPattern> _patterns = new();
 
-    internal static ConfigEntry<string> SyncedEntriesEntry => _syncedEntries;
+    /// <summary>Display only: the host's list while the player is in a lobby. Never read by the sync logic.</summary>
+    internal static ConfigEntry<string> HostSyncedEntriesEntry => _hostSyncedEntries;
 
     internal static string SyncedEntries => _syncedEntries.Value ?? string.Empty;
 
@@ -45,13 +47,23 @@ internal static class SyncSettings
 
         _syncNow = config.Bind(
             "Sync", "SyncNow", false,
-            "Host only. Check this and apply it to send your current settings to the players already in the lobby. It unchecks itself afterwards. Players who join later are synced automatically.");
+            "Host only. Check this and apply it to send your current settings to the players already in the lobby. " +
+            "It unchecks itself afterwards. Players who join later are synced automatically.");
 
         // A leftover 'true' (a crash between checking and unchecking) must not stay checked.
         if (_syncNow.Value)
             _syncNow.Value = false;
 
         _syncNow.SettingChanged += OnSyncNowChanged;
+
+        _hostSyncedEntries = config.Bind(
+            "Host", "HostSyncedEntries", "",
+            "Display only. Shows the host's SyncedEntries while you are in their lobby, and is empty otherwise. " +
+            "Your own SyncedEntries is never changed by a host. Editing this does nothing.");
+
+        // Display only, so never start with a leftover from an earlier session.
+        if (!string.IsNullOrEmpty(_hostSyncedEntries.Value))
+            _hostSyncedEntries.Value = string.Empty;
     }
 
     private static void OnSyncNowChanged(object sender, EventArgs e)
