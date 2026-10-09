@@ -1,0 +1,24 @@
+# Build output
+bin/
+obj/
+artifacts/
+*.zip
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Third-party and decompiled reference material (game code, other mods). Not ours to redistribute.
+references/
