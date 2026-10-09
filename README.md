@@ -9,14 +9,26 @@ Players who join your lobby get your LethalConfig settings applied automatically
 
 For example: `com.seeya.cameraoverhaul; LethalHUD; MrHat.EladsLethalHUD; ShaosilGaming.GeneralImprovements|Mechanics|AddHealthRechargeStation`
 
+Players are synced when they join. If you change settings after that, check `SyncNow` in LethalConfig and press Apply to send your current settings to everyone already in the lobby. It unchecks itself when done.
+
 ## Good to know
 
 - `SyncedEntries` is empty by default, so nothing is synced until the host fills it in.
 - Only the host's list counts. Players see it read-only while in your lobby.
 - Players without this mod (or on a different version) are refused when they try to join.
-- Synced values **overwrite the player's own settings** for those entries and are saved to their config files.
+- Synced values **overwrite the player's own settings** and stay saved after they leave (restoring is planned).
 - LethalConfig's and this mod's own settings are never synced.
 
-## Install
+## Minor details
 
-Install through a mod manager (Thunderstore / r2modman). Requires BepInEx and LethalConfig.
+- Players trust the host: whatever the host picks is applied to their settings. Only join lobbies you trust.
+- Syncing relies on LethalConfig's internals. A LethalConfig update may break it until this mod is updated (the log will warn you).
+- It also hooks into the game's networking, so a game update may break it until this mod is updated.
+- Some mods only read their settings at startup, so a synced value may not take effect until the player restarts the game.
+- Mods a player doesn't have are skipped, and mods that register with LethalConfig very late may be missed.
+- A typo in `SyncedEntries` syncs nothing (check the log), and `*` matches everything.
+
+## Planned
+
+- Put players' own settings back when they leave the lobby.
+- Better compatibility with mods that have their own sync (CSync).

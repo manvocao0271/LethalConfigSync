@@ -23,6 +23,7 @@ internal static class SyncSettings
     };
 
     private static ConfigEntry<string> _syncedEntries = null!;
+    private static ConfigEntry<bool> _syncNow = null!;
 
     private static string? _compiledFrom;
     private static List<EntryPattern> _patterns = new();
@@ -41,6 +42,35 @@ internal static class SyncSettings
             "Mods and settings the host syncs to players who join. Empty syncs nothing. " +
             "Separate entries with ';'. Use a mod GUID, or 'GUID|section|setting' for a single setting. " +
             "Example: com.seeya.cameraoverhaul; LethalHUD; MrHat.EladsLethalHUD; ShaosilGaming.GeneralImprovements|Mechanics|AddHealthRechargeStation");
+
+        _syncNow = config.Bind(
+            "Sync", "SyncNow", false,
+            "Host only. Check this and apply it to send your current settings to the players already in the lobby. It unchecks itself afterwards. Players who join later are synced automatically.");
+
+        // A leftover 'true' (a crash between checking and unchecking) must not stay checked.
+        if (_syncNow.Value)
+            _syncNow.Value = false;
+
+        _syncNow.SettingChanged += OnSyncNowChanged;
+    }
+
+    private static void OnSyncNowChanged(object sender, EventArgs e)
+    {
+        if (!_syncNow.Value)
+            return;
+
+        try
+        {
+            ConfigSyncNetwork.SendToAllClients();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogError($"SyncNow failed: {ex}");
+        }
+        finally
+        {
+            _syncNow.Value = false;
+        }
     }
 
     internal static bool IsProtectedMod(string modGuid) => ProtectedMods.Contains(modGuid);

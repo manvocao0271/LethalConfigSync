@@ -102,6 +102,34 @@ internal static class ConfigSyncNetwork
             Plugin.Logger.LogInfo($"Sent {entryCount} settings from {modCount} mods to client {clientId}.");
     }
 
+    /// <summary>
+    /// Host only: sends the rules and the selected settings again to every player already in the lobby.
+    /// This is what the SyncNow setting does. Players who join later are still synced on join.
+    /// </summary>
+    internal static void SendToAllClients()
+    {
+        NetworkManager? nm = NetworkManager.Singleton;
+        if (nm == null || !nm.IsServer)
+        {
+            Plugin.Logger.LogInfo("SyncNow only works for the host, in a lobby. Nothing was sent.");
+            return;
+        }
+
+        var clients = new List<ulong>(nm.ConnectedClientsIds);
+        int sent = 0;
+        foreach (ulong clientId in clients)
+        {
+            if (clientId == nm.LocalClientId)
+                continue;
+
+            SendToClient(clientId);
+            sent++;
+        }
+
+        if (sent == 0)
+            Plugin.Logger.LogInfo("SyncNow: there are no other players in the lobby.");
+    }
+
     private static void SendRules(NetworkManager nm, ulong clientId)
     {
         string rules = SyncSettings.SyncedEntries;
