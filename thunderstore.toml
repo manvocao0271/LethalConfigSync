@@ -13,7 +13,7 @@ repository = "https://thunderstore.io"
 namespace = "bobabulkerENTERPRISE"
 name = "LethalConfigSync"
 # The build passes --package-version from <Version> in the .csproj, which overrides this value.
-versionNumber = "0.0.1"
+versionNumber = "0.0.2"
 description = "[BETA] Clients who join a host will have their LethalConfig settings rewritten (configurable)."
 websiteUrl = ""
 containsNsfwContent = false

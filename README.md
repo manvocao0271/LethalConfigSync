@@ -11,6 +11,8 @@ For example: `com.seeya.cameraoverhaul; LethalHUD; MrHat.EladsLethalHUD; Shaosil
 
 Players are synced when they join. If you change settings after that, check `SyncNow` in LethalConfig and press Apply to send your current settings to everyone already in the lobby. It unchecks itself when done.
 
+To make everyone use your in-game head bobbing setting (the game's own, not a mod's), check `SyncHeadBobbing`. It is applied when players join and on `SyncNow`. It isn't saved to their game, and their own setting comes back when they leave.
+
 ## Good to know
 
 - `SyncedEntries` is empty by default, so nothing is synced until the host fills it in.

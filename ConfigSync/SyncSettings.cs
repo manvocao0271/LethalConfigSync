@@ -24,6 +24,7 @@ internal static class SyncSettings
 
     private static ConfigEntry<string> _syncedEntries = null!;
     private static ConfigEntry<bool> _syncNow = null!;
+    private static ConfigEntry<bool> _syncHeadBobbing = null!;
     private static ConfigEntry<string> _hostSyncedEntries = null!;
 
     private static string? _compiledFrom;
@@ -31,6 +32,9 @@ internal static class SyncSettings
 
     /// <summary>Display only: the host's list while the player is in a lobby. Never read by the sync logic.</summary>
     internal static ConfigEntry<string> HostSyncedEntriesEntry => _hostSyncedEntries;
+
+    /// <summary>Host only: also send the game's own head bobbing setting to clients.</summary>
+    internal static bool SyncHeadBobbing => _syncHeadBobbing.Value;
 
     internal static string SyncedEntries => _syncedEntries.Value ?? string.Empty;
 
@@ -49,6 +53,12 @@ internal static class SyncSettings
             "Sync", "SyncNow", false,
             "Host only. Check this and apply it to send your current settings to the players already in the lobby. " +
             "It unchecks itself afterwards. Players who join later are synced automatically.");
+
+        _syncHeadBobbing = config.Bind(
+            "Sync", "SyncHeadBobbing", false,
+            "Host only. Players in your lobby get the same head bobbing setting as yours (the game's own setting, " +
+            "not a mod's). It is not saved to their game, and their own value comes back when they leave. " +
+            "Sent when a player joins and on SyncNow.");
 
         // A leftover 'true' (a crash between checking and unchecking) must not stay checked.
         if (_syncNow.Value)

@@ -18,6 +18,7 @@ internal static class NetworkPatches
     private static void RegisterHandlerPostfix(NetworkManager __instance, bool server)
     {
         HostRules.Clear();
+        HeadBobSync.Restore();
         ConfigSyncNetwork.ResetSession();
 
         if (server)
@@ -35,6 +36,7 @@ internal static class NetworkPatches
     private static void ShutdownPostfix()
     {
         HostRules.Clear();
+        HeadBobSync.Restore();
         ConfigSyncNetwork.ResetSession();
     }
 

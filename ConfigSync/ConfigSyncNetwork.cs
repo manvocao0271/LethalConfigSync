@@ -11,8 +11,9 @@ namespace LethalConfigSync.ConfigSync;
 ///
 /// When a client joins, the host sends two kinds of message:
 ///
-///   Rules (always, even when empty): the host's SyncedEntries list, so the client can show it read-only.
-///     int version, string rules
+///   Rules (always, even when empty): the host's SyncedEntries list, so the client can show it, plus the
+///   state of the game's head bobbing setting (0 = not synced, 1 = off, 2 = on; see HeadBobSync).
+///     int version, string rules, byte head bobbing state
 ///
 ///   Config (only when the list selects something): the selected settings, one mod at a time, split into
 ///   small chunks so each message stays well under Unity Transport's default payload limit (LAN lobbies).
@@ -27,7 +28,7 @@ internal static class ConfigSyncNetwork
 {
     private const string ConfigMessageName = "bobabulkerENTERPRISE.LethalConfigSync.ConfigSync";
     private const string RulesMessageName = "bobabulkerENTERPRISE.LethalConfigSync.Rules";
-    internal const int ProtocolVersion = 1;
+    internal const int ProtocolVersion = 2;
     private const int MaxEntriesPerChunk = 4096;
     private const int ChunkBudgetBytes = 4096;
 
@@ -133,12 +134,14 @@ internal static class ConfigSyncNetwork
     private static void SendRules(NetworkManager nm, ulong clientId)
     {
         string rules = SyncSettings.SyncedEntries;
-        int size = sizeof(int) + FastBufferWriter.GetWriteSize(rules);
+        byte headBob = HeadBobSync.HostState();
+        int size = sizeof(int) + FastBufferWriter.GetWriteSize(rules) + sizeof(byte);
 
         using var writer = new FastBufferWriter(size, Allocator.Temp);
         int version = ProtocolVersion;
         writer.WriteValueSafe(version);
         writer.WriteValueSafe(rules);
+        writer.WriteValueSafe(headBob);
 
         nm.CustomMessagingManager.SendNamedMessage(RulesMessageName, clientId, writer, NetworkDelivery.ReliableFragmentedSequenced);
     }
@@ -253,7 +256,9 @@ internal static class ConfigSyncNetwork
                 return;
 
             reader.ReadValueSafe(out string rules);
+            reader.ReadValueSafe(out byte headBob);
             HostRules.Apply(rules);
+            HeadBobSync.Apply(headBob);
 
             Plugin.Logger.LogInfo(rules.Length == 0
                 ? "The host syncs nothing."
@@ -333,29 +338,52 @@ internal static class ConfigSyncNetwork
                 if (!incoming.TryGetValue((entry.Definition.Section, entry.Definition.Key), out string? value))
                     continue;
 
-                ConfigFile file = entry.ConfigFile;
-                if (!originalSaveFlags.ContainsKey(file))
+                // One setting that fails (another mod's SettingChanged handler throwing, for example) must
+                // not stop the rest of the chunk, or the files from being saved afterwards.
+                try
                 {
-                    originalSaveFlags[file] = file.SaveOnConfigSet;
-                    file.SaveOnConfigSet = false;
+                    ConfigFile file = entry.ConfigFile;
+                    if (!originalSaveFlags.ContainsKey(file))
+                    {
+                        originalSaveFlags[file] = file.SaveOnConfigSet;
+                        file.SaveOnConfigSet = false;
+                    }
+
+                    if (entry.GetSerializedValue() == value)
+                        continue; // already identical; avoid a pointless SettingChanged
+
+                    // Raises SettingChanged, which is how mods notice a changed value. LethalConfig's own
+                    // sliders subscribe to it too.
+                    entry.SetSerializedValue(value);
+
+                    if (entry.GetSerializedValue() == value)
+                    {
+                        pending.Changed++;
+                        pending.ChangedFiles.Add(file);
+                    }
+                    else
+                    {
+                        pending.Rejected++; // unparseable, or clamped by the entry's acceptable range
+                        Plugin.Logger.LogDebug($"[{modGuid}] host value for [{entry.Definition.Section}] {entry.Definition.Key} was not accepted as-is: '{value}'.");
+                    }
                 }
-
-                if (entry.GetSerializedValue() == value)
-                    continue; // already identical; avoid a pointless SettingChanged
-
-                // Raises SettingChanged, which is how mods notice a changed value. LethalConfig's own
-                // sliders subscribe to it too.
-                entry.SetSerializedValue(value);
-
-                if (entry.GetSerializedValue() == value)
+                catch (Exception ex)
                 {
-                    pending.Changed++;
-                    pending.ChangedFiles.Add(file);
-                }
-                else
-                {
-                    pending.Rejected++; // unparseable, or clamped by the entry's acceptable range
-                    Plugin.Logger.LogDebug($"[{modGuid}] host value for [{entry.Definition.Section}] {entry.Definition.Key} was not accepted as-is: '{value}'.");
+                    // The value may have been stored before the failure; if so, it still needs saving.
+                    bool applied = false;
+                    try { applied = entry.GetSerializedValue() == value; } catch (Exception) { }
+
+                    if (applied)
+                    {
+                        pending.Changed++;
+                        pending.ChangedFiles.Add(entry.ConfigFile);
+                    }
+                    else
+                    {
+                        pending.Rejected++;
+                    }
+
+                    Plugin.Logger.LogWarning($"[{modGuid}] error while applying [{entry.Definition.Section}] {entry.Definition.Key}: {ex.Message}");
                 }
             }
         }
